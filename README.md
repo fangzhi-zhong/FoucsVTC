@@ -126,6 +126,50 @@ export VTC_GRPO_TRAIN="$VTC_GRPO_DATA_ROOT/train.parquet"
 export VTC_GRPO_VAL="$VTC_GRPO_DATA_ROOT/val.parquet"
 ```
 
+### 8K 已训练后的 32K 扩长 shard
+
+如果 8K GRPO 已经完成，扩长阶段不应继续使用原来的短样本比例。本仓库提供单独的
+构建器，默认生成 `6400` 条训练样本和 `640` 条验证样本：
+
+| prompt 估计长度 | train | validation |
+| --- | ---: | ---: |
+| `<=8K`（保留少量锚点） | 641（10.02%） | 63（9.84%） |
+| `8K–16K` | 1920（30%） | 192（30%） |
+| `16K–24K` | 2240（35%） | 224（35%） |
+| `24K–32K` | 1599（24.98%） | 161（25.16%） |
+
+目标活动 DPI 为 `72/96/144 = 50%/30%/20%`（实际 train 为 3200/1921/1279，
+validation 为 320/190/130），来源比例沿用 50K recipe 的
+`Gemini/LongBench/MRCR/RULER-v1/RULER-v2 = 60%/10%/10%/10%/10%`。构建使用固定
+seed `20260912`，并将 `prompt_length_estimate` 和 `length_bucket` 写入每行的
+`extra_info`：
+
+```bash
+python examples/data_preprocess/build_qwen35_vtc_grpo_32k_6p4k.py \
+  --source-root /path/to/data/VTC/SFT \
+  --output-root /path/to/data/VTC/GRPO \
+  --seed 20260912
+```
+
+本机已生成：
+`/vepfs-mlp2/c20250405/400042/data/VTC/GRPO/train_6p4k_32k.parquet`、
+`val_640_32k.parquet` 和 `train_6p4k_32k.manifest.json`。长度是 Qwen3.5 视觉 token
+的保守估计，最大值为 32705；实际启动时仍需开启长度过滤，并把
+`VTC_MAX_PROMPT_LENGTH=32768`。4 节点脚本可以这样使用：
+
+```bash
+VTC_GRPO_TRAIN=/path/to/data/VTC/GRPO/train_6p4k_32k.parquet \
+VTC_GRPO_VAL=/path/to/data/VTC/GRPO/val_640_32k.parquet \
+VTC_MAX_PROMPT_LENGTH=32768 \
+VTC_TEST_FREQ=0 \
+  bash examples/agent/qwen3_5_vtc/run_grpo_4nodes_8gpu_baseline.sh
+```
+
+`VTC_TEST_FREQ=0` 关闭训练中的 eval；脚本仍会读取一个有效的 `VTC_GRPO_VAL` 文件来
+初始化 DataLoader。32K prompt 再加上 agent response、工具 observation 后，必须确认
+模型本身的 `max_position_embeddings` 和 `max_model_len` 足够；不要把“prompt 32K”误当成
+“总上下文只有 32K”。
+
 ## 运行顺序
 
 先做不占 GPU 的 schema、工具和图片路径检查：

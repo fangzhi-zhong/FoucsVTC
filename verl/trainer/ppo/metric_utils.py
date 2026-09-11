@@ -17,7 +17,7 @@ Metrics related to the PPO trainer.
 
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -28,6 +28,45 @@ from verl import DataProto
 def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
     for key, val in metrics.items():
         metrics[key] = np.mean(val)
+    return metrics
+
+
+def _mean_numeric_non_tensor_field(values: Any) -> Optional[float]:
+    """Return the finite mean of a scalar-like non-tensor batch field.
+
+    Reward managers store auxiliary per-sample values in ``non_tensor_batch``.
+    Depending on the reward function and the collation path, those values can
+    be a regular numeric NumPy array or an object array.  Keep logging robust
+    to other reward managers by ignoring fields that are not scalar-numeric
+    instead of making the training step fail.
+    """
+
+    try:
+        array = np.asarray(values, dtype=np.float64).reshape(-1)
+    except (TypeError, ValueError):
+        return None
+    if array.size == 0:
+        return None
+    finite = array[np.isfinite(array)]
+    if finite.size == 0:
+        return None
+    return float(np.mean(finite))
+
+
+def _compute_reward_extra_metrics(batch: DataProto) -> Dict[str, float]:
+    """Expose selected scalar reward diagnostics to the training logger.
+
+    ``NaiveRewardManager`` puts every value returned by a dict-based reward
+    function into ``batch.non_tensor_batch``.  The regular training metrics
+    path previously only consumed tensor fields, so VTC's IoU diagnostics were
+    visible during validation but absent from per-step W&B logs.
+    """
+
+    metrics: Dict[str, float] = {}
+    for field_name in ("best_iou", "iou_reward"):
+        value = _mean_numeric_non_tensor_field(batch.non_tensor_batch.get(field_name))
+        if value is not None:
+            metrics[f"reward/{field_name}"] = value
     return metrics
 
 
@@ -145,6 +184,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
         "actor/response_length/mean": torch.mean(response_length).detach().item(),
         "actor/observation_length/mean": torch.mean(obs_length).detach().item(),
     }
+    metrics.update(_compute_reward_extra_metrics(batch))
     return metrics
 
 
