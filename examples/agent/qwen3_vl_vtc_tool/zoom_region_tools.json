@@ -1,0 +1,31 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "zoom_region",
+      "description": "Crop a potentially unreadable region from a document page and return it as a new image.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number."
+          },
+          "bbox_2d": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[x1, y1, x2, y2] normalized to [0, 1000]."
+          }
+        },
+        "required": [
+          "page",
+          "bbox_2d"
+        ]
+      }
+    }
+  }
+]
