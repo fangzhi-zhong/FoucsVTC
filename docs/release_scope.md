@@ -9,8 +9,9 @@ modifications are retained because the model, loss, multimodal rollout, and
 crop behavior depend on them. See the module guides for their installation environments.
 
 The release contains source code, prompts, configuration templates, dependency
-declarations, documentation, and the paper's method overview figure used in
-the README. It excludes experiment outputs and scores, the full paper source,
+declarations, documentation, and two selected paper illustrations used in the
+README: Figure 1, including its result plots, and the method overview. It
+excludes raw experiment outputs and score files, the full paper source,
 other paper figures, generated annotations, original training/evaluation
 data and dataset images, font binaries, model weights and intermediate checkpoints,
 tracking logs, caches, editor settings, and historical Git metadata.
@@ -32,8 +33,9 @@ must be explicitly sourced if used.
 This is a source release, not a bundled reproduction environment. It requires
 user-provided model checkpoints, dataset inputs, fonts, and suitable GPU
 software for training and model serving. The public examples describe runnable
-interfaces and configuration choices; they do not include benchmark results
-or assert that every recipe is an exact reproduction of a paper experiment.
+interfaces and configuration choices without asserting that every recipe
+exactly reproduces a paper experiment. The selected illustrations present
+paper results; underlying experiment outputs are not bundled.
 
 Third-party copyright headers and license texts are retained where code is
 redistributed. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

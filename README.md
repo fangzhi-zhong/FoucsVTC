@@ -24,6 +24,11 @@ Reasoning–Evidence Localization supervised fine-tuning (REL-SFT) with
 tool-assisted GRPO. The model uses `zoom_region` to inspect a selected region
 of an aligned high-DPI page before answering.
 
+![Figure 1: fixed-resolution VTC, FocusVTC selective enhancement, and benchmark comparisons](docs/assets/focusvtc_introduction.png)
+
+**Figure 1 from the paper.** Fixed-resolution VTC and FocusVTC's adaptive
+reading strategy, with RULER v1 and general-capability comparisons.
+
 ### Key Features
 
 - **Adaptive resolution.** Low-DPI pages provide the document overview;
