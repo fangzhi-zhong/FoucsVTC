@@ -1,0 +1,9 @@
+# Lightweight benchmark clients, gateway, and metrics.
+openai>=1.0
+aiohttp>=3.9
+Pillow>=10
+tqdm>=4.66
+jieba>=0.42
+fuzzywuzzy>=0.18
+rouge>=1.0.1
+editdistance>=0.8

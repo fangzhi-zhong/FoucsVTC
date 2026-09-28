@@ -1,0 +1,19 @@
+{
+  "extends": "_base.json",
+  "benchmark": "vtcbench",
+  "input_mode": "image",
+  "tiers": [
+    "data_8k",
+    "data_8k_16k",
+    "data_16k_32k",
+    "data_32k_64k"
+  ],
+  "data_root": "${FOCUSVTC_DATA_ROOT}/VTCBench-Wild",
+  "results_dir": "${FOCUSVTC_OUTPUT_ROOT}/vtcbench",
+  "backend": {
+    "max_images": 72,
+    "max_model_len": 262144,
+    "max_num_seqs": 4
+  },
+  "vtcbench_root": "${VTCBENCH_ROOT}"
+}

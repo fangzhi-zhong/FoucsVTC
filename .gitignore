@@ -1,80 +1,73 @@
-# Local Python environments and caches
-.venv/
-venv/
-env/
+# Credentials and machine-local configuration
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+*service-account*.json
+.netrc
+.pypirc
+
+# Python environments and generated files
+.venv*/
+venv/
 __pycache__/
 *.py[cod]
-*.so
 *.egg-info/
+build/
+dist/
 .pytest_cache/
-.mypy_cache/
 .ruff_cache/
+.mypy_cache/
+.cache/
 .ipynb_checkpoints/
 
-# IDE and OS files
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-
-# Training runs and experiment tracking
-output/
-outputs/
+# Datasets, model parameters, and generated experiment artifacts
+/datasets/
+/models/
+/external/
 checkpoints/
 checkpoint-*/
+global_step_*/
+output/
+outputs/
+result/
+results/
+artifacts/
 logs/
-*.log
+log/
 wandb/
 runs/
-tensorboard/
-mlruns/
-hydra_outputs/
-**/.hydra/
-
-# Model and optimizer artifacts
-*.safetensors
-*.bin
+*.log
+*.pid
+*.out
 *.pt
 *.pth
+*.bin
+*.safetensors
 *.ckpt
 *.onnx
-*.msgpack
-**/optimizer/
-**/dataloader_state/
-**/extra_state/
-
-# Local data/model directories and generated metadata
-data/
-datasets/
+*.gguf
+*.parquet
 *.arrow
-*.feather
-*.orc
+*.jsonl
 *.npy
 *.npz
-*.h5
-*.hdf5
 *.pkl
 *.pickle
+*.h5
+*.hdf5
+*.ttf
+*.otf
+*.woff
+*.woff2
 *.tar
 *.tar.gz
-*.tgz
 *.zip
-*.7z
-*.rar
-manifest.json
 
-# Datasets generated locally.  These five small fixtures are intentionally
-# kept in git so a new machine can run the offline pipeline check and smoke run.
-examples/data/**/*.parquet
-examples/data/**/*.jsonl
-!examples/
-!examples/data/
-!examples/data/qwen35_vtc/
-!examples/data/qwen35_vtc/train_8.parquet
-!examples/data/qwen35_vtc/val_4.parquet
-!examples/data/qwen35_vtc/train_8_deepeyes_prompt.parquet
-!examples/data/qwen35_vtc/val_4_deepeyes_prompt.parquet
-!examples/data/qwen35_vtc/train_16k_sample_dup2.parquet
+# Editor / OS state
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

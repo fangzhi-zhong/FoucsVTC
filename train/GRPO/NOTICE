@@ -1,0 +1,7 @@
+This directory contains locally modified third-party training framework code.
+Original copyright notices in source files are retained.
+See README.md for upstream attribution and the scope of local modifications.
+
+Agent tool abstraction: Copyright (c) 2025 Agent-R1 Teams, MIT License.
+Adapted torchtune helpers: Copyright 2024 Meta, BSD 3-Clause License.
+See licenses/ for the corresponding license texts.

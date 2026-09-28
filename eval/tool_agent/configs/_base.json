@@ -1,0 +1,41 @@
+{
+  "model": "${FOCUSVTC_MODEL}",
+  "served_model_name": "FocusVTC",
+  "backend_base_url": "http://127.0.0.1:18450/v1",
+  "gateway_host": "127.0.0.1",
+  "gateway_port": 18350,
+  "system_prompt": "You are a helpful assistant.",
+  "turn_prompt": "\nThink first. During thinking, point out the relevant page or evidence location when needed. Then call zoom_region if needed, and answer.\n\nFormat strictly as: <think>...</think> <tool_call>...</tool_call> (if tools are needed) <answer>...</answer>.",
+  "tool_schema_path": "train/GRPO/examples/agent/qwen3_vl_vtc_tool/zoom_region_tools.json",
+  "grpo_root": "train/GRPO",
+  "max_tool_calls": 8,
+  "max_turns": 9,
+  "single_response_max_tokens": 2048,
+  "max_response_tokens": 10240,
+  "sampling": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "top_k": -1,
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repetition_penalty": 1.0
+  },
+  "prefer_high_res_dpi": 144,
+  "high_res_policy": "source_image",
+  "require_high_res": false,
+  "crop_padding_ratio": 0.05,
+  "backend": {
+    "python": "python",
+    "port": 18450,
+    "tensor_parallel_size": 1,
+    "max_model_len": 262144,
+    "max_images": 72,
+    "max_num_seqs": 8,
+    "gpu_memory_utilization": 0.9,
+    "allowed_local_media_path": "${FOCUSVTC_DATA_ROOT}",
+    "enable_prefix_caching": true,
+    "enable_chunked_prefill": true,
+    "mamba_cache_mode": "align"
+  },
+  "chat_template_path": "eval/tool_agent/qwen35_vtc_eval_chat_template.jinja"
+}

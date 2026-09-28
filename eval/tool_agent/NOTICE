@@ -1,0 +1,8 @@
+qwen35_vtc_eval_chat_template.jinja is adapted from the Qwen3.5-9B chat template.
+Copyright 2026 Alibaba Cloud. Licensed under Apache-2.0; see LICENSE.
+Upstream: https://huggingface.co/Qwen/Qwen3.5-9B
+FocusVTC modifies the template to retain reasoning in historical assistant
+turns that called a tool, matching the training trajectory representation.
+
+This notice applies to the adapted template; it does not independently grant
+a project-wide license to other FocusVTC source files.

@@ -1,0 +1,13 @@
+# Versions recorded in the source Qwen3.5 training environment.
+# Install a matching CUDA build of torch before compiling flash-attn.
+-e ./train/GRPO
+torch==2.10.0
+torchvision==0.25.0
+transformers==5.16.1
+vllm==0.19.1
+flash-attn==2.8.3
+liger-kernel>=0.7.0
+qwen-vl-utils
+pillow
+causal-conv1d>=1.5.0
+flash-linear-attention>=0.4.0

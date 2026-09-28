@@ -1,0 +1,17 @@
+{
+  "extends": "_base.json",
+  "benchmark": "longbench",
+  "input_mode": "image",
+  "high_res_policy": "paired_dpi144",
+  "require_high_res": true,
+  "runs": [
+    "72"
+  ],
+  "data_root": "${FOCUSVTC_DATA_ROOT}/LongBench_VTC",
+  "results_dir": "${FOCUSVTC_OUTPUT_ROOT}/longbench",
+  "backend": {
+    "max_images": 568,
+    "max_model_len": 262144,
+    "max_num_seqs": 4
+  }
+}

@@ -1,0 +1,2 @@
+# Separate GPU environment; reference version from the original serving environment.
+vllm==0.19.1

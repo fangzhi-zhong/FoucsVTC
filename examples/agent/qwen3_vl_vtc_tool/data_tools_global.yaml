@@ -1,5 +1,0 @@
-# Example Hydra data overrides. Resolve the relative path from train/GRPO.
-data:
-  tools_schema_path: examples/agent/qwen3_vl_vtc_tool/zoom_region_tools.json
-  tools_enabled_key: enable_tools
-  tools_key: tools

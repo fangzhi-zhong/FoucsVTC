@@ -1,0 +1,11 @@
+{
+  "extends": "_base.json",
+  "benchmark": "inference",
+  "high_res_policy": "paired_dpi144",
+  "require_high_res": true,
+  "backend": {
+    "max_images": 72,
+    "max_model_len": 32768,
+    "max_num_seqs": 1
+  }
+}

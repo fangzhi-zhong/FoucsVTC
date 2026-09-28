@@ -1,0 +1,16 @@
+{
+  "extends": "_base.json",
+  "benchmark": "ruler_v1",
+  "input_mode": "image",
+  "high_res_policy": "paired_dpi144",
+  "require_high_res": true,
+  "runs": [
+    "72"
+  ],
+  "data_root": "${FOCUSVTC_DATA_ROOT}/RULER_v1_VTC",
+  "results_dir": "${FOCUSVTC_OUTPUT_ROOT}/ruler_v1",
+  "backend": {
+    "max_images": 16,
+    "max_model_len": 32768
+  }
+}

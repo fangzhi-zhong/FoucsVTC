@@ -1,0 +1,23 @@
+{
+    "narrativeqa": "qa_f1",
+    "qasper": "qa_f1",
+    "multifieldqa_en": "qa_f1",
+    "multifieldqa_zh": "qa_f1_zh",
+    "hotpotqa": "qa_f1",
+    "2wikimqa": "qa_f1",
+    "musique": "qa_f1",
+    "dureader": "rouge_zh",
+    "gov_report": "rouge",
+    "qmsum": "rouge",
+    "multi_news": "rouge",
+    "vcsum": "rouge_zh",
+    "trec": "classification",
+    "triviaqa": "qa_f1",
+    "samsum": "rouge",
+    "lsht": "classification",
+    "passage_count": "count",
+    "passage_retrieval_en": "retrieval",
+    "passage_retrieval_zh": "retrieval_zh",
+    "lcc": "code_sim",
+    "repobench-p": "code_sim"
+}

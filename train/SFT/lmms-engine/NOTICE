@@ -1,0 +1,6 @@
+This directory contains locally modified third-party training framework code.
+Original copyright notices in source files are retained.
+See README.md for upstream attribution and the scope of local modifications.
+
+Adapted torchtune helpers: Copyright 2024 Meta, BSD 3-Clause License.
+See licenses/LICENSE.torchtune.

@@ -1,0 +1,72 @@
+trainer_type: fsdp2_trainer
+
+dataset_config:
+  dataset_type: qwen3_5_iterable
+  dataset_format: yaml
+  processor_config:
+    processor_name: ${oc.env:FOCUSVTC_MODEL,models/Qwen3.5-9B}
+    processor_type: qwen3_5
+  datasets:
+    - path: ${oc.env:FOCUSVTC_SFT_DATASET,datasets/sft/train.jsonl}
+      data_folder: ${oc.env:FOCUSVTC_SFT_ASSETS,datasets/sft}
+      data_type: jsonl
+  shuffle: true
+  add_system_prompt: true
+  think_mode: true
+  random_grounding_prompt: true
+  grounding_prompt_seed: 42
+  object_storage: none
+  packing: true
+  packing_strategy: best_fit_lookahead
+  packing_length: 32768
+  packing_lookahead: 256
+  filter_overlong: true
+  max_length: 32768
+  video_backend: qwen_vl_utils
+
+trainer_args:
+  output_dir: ${oc.env:FOCUSVTC_SFT_OUTPUT,outputs/sft}
+  do_train: true
+  do_eval: false
+  eval_strategy: "no"
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 1
+  learning_rate: 0.000001
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  num_train_epochs: 1
+  max_steps: -1
+  lr_scheduler_type: cosine
+  warmup_steps: 100
+  logging_steps: 1
+  save_strategy: steps
+  save_steps: 500
+  save_total_limit: 3
+  bf16: true
+  dataloader_num_workers: 4
+  remove_unused_columns: false
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+  optim: adamw_torch_fused
+  report_to: []
+  run_name: focusvtc-sft
+  fsdp_config:
+    transformer_layer_cls_to_wrap:
+      - Qwen3_5DecoderLayer
+      - Qwen3_5VisionBlock
+    reshard_after_forward: true
+  use_liger_kernel: true
+  freeze_modules: [model.visual]
+  use_rmpad: false
+  fsdp2: true
+  sp_ulysses_degree: 1
+  reduce_dtype: bfloat16
+  output_dtype: bfloat16
+  torch_empty_cache_steps: 100
+
+model_config:
+  load_from_pretrained_path: ${oc.env:FOCUSVTC_MODEL,models/Qwen3.5-9B}
+  attn_implementation: flash_attention_2
+  monkey_patch_kwargs:
+    patch_type: [packing]

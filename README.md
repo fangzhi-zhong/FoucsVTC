@@ -1,244 +1,211 @@
-# Qwen3.5-VL VTC GRPO 复现指南
+<div align="center">
 
-本目录包含 Qwen3.5-VL-9B 的视觉工具调用（VTC）GRPO recipe。训练轨迹可以多次
-调用 `zoom_region(page, bbox_2d)`，工具从高 DPI 页面裁剪证据图，再把裁剪结果作为
-新的视觉 observation。最终奖励由答案正确性、输出格式、工具调用质量和调用惩罚组成。
+# FocusVTC
 
-文档中的命令都从 `train/GRPO` 执行。请先固定本次代码版本，之后不要在训练过程中
-修改 checkout：
+### Efficient and High-Performance Visual Text Compression with Adaptive Resolution
 
-```bash
-cd /path/to/VTC/train/GRPO
-git rev-parse HEAD                 # 记录到实验卡片
-git status --short                 # 应为空，或只包含你明确的本地改动
+**Read compressed pages. Locate evidence. Enhance the regions you need.**
+
+[![Model](https://img.shields.io/badge/Hugging%20Face-FocusVTC-FFD21E?style=flat-square)](https://huggingface.co/zfz04/FocusVTC)
+[![Dataset](https://img.shields.io/badge/ModelScope-REL--CoT-624AFF?style=flat-square)](https://www.modelscope.cn/datasets/zhongfangzhi/REL-CoT)
+[![Code](https://img.shields.io/badge/GitHub-Code-181717?style=flat-square&logo=github)](https://github.com/fangzhi-zhong/FoucsVTC)
+
+**Paper:** —
+
+[Introduction](#introduction) · [Quick Start](#quick-start) · [Training](#training) · [Evaluation](#evaluation) · [Code Guide](#code-guide)
+
+</div>
+
+## Introduction
+
+FocusVTC reads long documents through compact page images and retrieves
+higher-resolution evidence as it reasons. Built around Qwen3.5, it combines
+Reasoning–Evidence Localization supervised fine-tuning (REL-SFT) with
+tool-assisted GRPO. The model uses `zoom_region` to inspect a selected region
+of an aligned high-DPI page before answering.
+
+### Key Features
+
+- **Adaptive resolution.** Low-DPI pages provide the document overview;
+  selected regions are read from aligned high-resolution pages.
+- **Evidence-grounded supervision.** REL-CoT connects reasoning and answers
+  with evidence page numbers and bounding boxes.
+- **Tool-assisted learning.** GRPO trains the policy to request and use
+  evidence crops, with rewards for answer accuracy and evidence-aware tool use.
+- **Training and evaluation code.** The release includes REL-CoT preparation,
+  SFT and GRPO runtimes, document inference, and benchmark adapters.
+
+```mermaid
+flowchart LR
+    D[Document] --> L[Low-DPI pages]
+    D --> H[High-DPI pages]
+    L --> M[FocusVTC reasoning]
+    M --> Z[zoom_region]
+    H --> Z
+    Z --> M
+    M --> A[Answer]
 ```
 
-## 机器和软件要求
+## Quick Start
 
-已验证的组合如下；不同 CUDA/驱动可以使用对应的官方 wheel，但应保持这些核心版本
-一致，否则 vLLM、FlashAttention 和 Qwen3.5 的多模态实现可能不兼容。
+Use Python 3.12 on Linux. Model serving requires a compatible NVIDIA GPU/CUDA
+environment; rendering and evaluation clients can run on CPU. Commands below
+run from the cloned repository root.
 
-| 项目 | 已验证值 |
+### 1. Install
+
+```bash
+git clone https://github.com/fangzhi-zhong/FoucsVTC.git
+cd FoucsVTC
+
+python3.12 -m venv .venv-eval
+source .venv-eval/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r eval/rendering/requirements.txt -r eval/requirements.txt
+python -m pip install -r eval/requirements-serving.txt
+```
+
+Install DejaVu Sans locally. Benchmark rendering also needs the system
+Poppler tools; the single-document example below uses PDFium. See the
+[evaluation guide](docs/evaluation.md) for serving dependencies and GPU configuration.
+
+### 2. Configure the model and paths
+
+Download the model from [Hugging Face](https://huggingface.co/zfz04/FocusVTC)
+to a local directory, then configure `.env`:
+
+```bash
+cp .env.example .env
+# Set FOCUSVTC_MODEL to your local model directory and edit other paths as needed.
+set -a
+source .env
+set +a
+```
+
+The inference loader expects a merged Hugging Face checkpoint with model,
+tokenizer, and processor files. The default local path is `models/FocusVTC`.
+DejaVu Sans defaults to `/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf`;
+set `FOCUSVTC_FONT_PATH` if it is installed elsewhere.
+
+### 3. Render and ask a question
+
+Render a UTF-8 document into matching 72 and 144 DPI pages:
+
+```bash
+python eval/rendering/render_document.py \
+  --text-file /path/to/context.txt \
+  --out-root "$FOCUSVTC_DATA_ROOT/demo" \
+  --dpis 72,144
+
+bash eval/tool_agent/serve_stack.sh eval/tool_agent/configs/inference.json
+```
+
+In another terminal, activate the same environment and load `.env`, then run:
+
+```bash
+python eval/infer.py \
+  --images "$FOCUSVTC_DATA_ROOT"/demo/dpi_72/page_*.png \
+  --question "What evidence in this document answers the question?" \
+  --output "$FOCUSVTC_OUTPUT_ROOT/demo.json"
+```
+
+Keep both DPI trees: the model receives 72 DPI pages, and the tool reads their
+144 DPI counterparts. The output contains the answer and tool trajectory.
+
+## Training
+
+### Prepare REL-CoT
+
+[REL-CoT on ModelScope](https://www.modelscope.cn/datasets/zhongfangzhi/REL-CoT)
+provides original text, 72 DPI pages, and existing reasoning/evidence
+supervision. Follow the [data guide](data/README.md) to download and unpack it,
+then render the seven training resolutions:
+
+```bash
+python -m pip install -r data/requirements.txt
+python data/render_relcot_sft.py \
+  --dataset-root datasets/REL-CoT \
+  --out-root datasets/REL-CoT_SFT \
+  --font-path /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+  --dpis 48 60 72 84 96 120 144 --processes 8
+```
+
+All seven views, including 72 DPI, are rendered from the original text using
+**DejaVu Sans**. The tool preserves reasoning and answers while remapping
+evidence boxes and page references to the new layout. For older pages using
+another font, the [data guide](data/README.md#render-seven-dpi-views) explains
+`--source-font-path`. Split training and validation by `metadata.base_id` to
+keep all DPI variants of a document together.
+
+### Stage 1: REL-SFT
+
+Install the separate SFT environment using the [training guide](docs/training.md),
+then launch:
+
+```bash
+export FOCUSVTC_MODEL=/path/to/base-model
+export FOCUSVTC_SFT_DATASET="$PWD/datasets/REL-CoT_SFT/train.jsonl"
+export FOCUSVTC_SFT_ASSETS="$PWD/datasets/REL-CoT_SFT"
+NGPUS=8 bash train/SFT/run.sh
+```
+
+The Qwen3.5 recipe is in [`train/SFT/configs/qwen3_5.yaml`](train/SFT/configs/qwen3_5.yaml).
+See the training guide for checkpoint export and distributed settings.
+
+### Stage 2: Tool-assisted GRPO
+
+In the GRPO environment, start from a merged SFT checkpoint and prepared
+training/validation Parquet files:
+
+```bash
+export VTC_GRPO_MODEL=/path/to/merged-sft-model
+export VTC_GRPO_TRAIN=/path/to/grpo/train.parquet
+export VTC_GRPO_VAL=/path/to/grpo/val.parquet
+NGPUS=8 bash train/GRPO/run.sh
+```
+
+GRPO inputs require paired low/high-resolution pages and independent reference
+answers. The released REL-CoT manifest does not provide the required `gold`
+field. See [GRPO data preparation](docs/training.md#grpo-data) for the converter
+and reward metadata.
+
+## Evaluation
+
+The shared gateway supports RULER v1/v2, LongBench, and MRCR. VTCBench uses an
+external checkout; MMMU and OCRBench use an external lmms-eval installation.
+Prepare inputs with the [benchmark rendering guide](eval/rendering/README.md),
+then start the matching configuration:
+
+```bash
+bash eval/tool_agent/serve_stack.sh eval/tool_agent/configs/longbench.json
+
+# In another terminal with the same environment and .env loaded:
+python eval/tool_agent/run_benchmark.py longbench
+```
+
+The launcher also accepts `ruler_v1`, `ruler_v2`, `mrcr`, `vtcbench`, `mmmu`,
+and `ocrbench`. See the [evaluation guide](docs/evaluation.md) for data layouts,
+external adapters, tool settings, and scoring conventions.
+
+## Code Guide
+
+| Path | Purpose |
 | --- | --- |
-| Python | 3.12 |
-| GPU | NVIDIA，正式配置为单机 8×80 GB；2×80 GB 可跑 smoke |
-| PyTorch | 2.10.0（CUDA 12.8 wheel） |
-| Transformers | 5.16.1 |
-| vLLM | 0.19.1 |
-| flash-attn | 2.8.3 |
-| verl | 本目录代码，版本文件为 `verl/version/version` |
+| [`data/`](data/README.md) | REL-CoT rendering and SFT conversion |
+| [`train/SFT/`](docs/training.md#supervised-fine-tuning) | REL-SFT recipe and local LMMs-Engine |
+| [`train/GRPO/`](train/GRPO/README.md) | GRPO runtime, zoom tool, and reward |
+| [`eval/rendering/`](eval/rendering/README.md) | Document and benchmark renderers |
+| [`eval/`](eval/README.md) | Inference, shared gateway, and benchmark adapters |
+| [`eval/font_acuity/`](eval/font_acuity/README.md) | Font and point-size calibration |
+| [`.env.example`](.env.example) | Local model, data, output, and font paths |
 
-建议在目标机器建立独立环境，并用与驱动匹配的 CUDA wheel：
+`data/` contains tools only. Keep downloaded data under `datasets/`, model
+checkpoints under `models/`, and run artifacts under `outputs/`. These assets
+are not bundled in the repository. See the [release scope](docs/release_scope.md)
+for package contents.
 
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip setuptools wheel
+## Acknowledgments
 
-# 下面是已验证的版本；CUDA wheel 的 index-url 按机器改为官方或内部镜像。
-python -m pip install \
-  'torch==2.10.0' \
-  'transformers==5.16.1' \
-  'vllm==0.19.1' \
-  'flash-attn==2.8.3' \
-  'ray[default]>=2.10' 'hydra-core' 'datasets' 'pyarrow>=15' \
-  'accelerate' 'numpy' 'pandas' 'peft' 'scipy' 'torchdata' \
-  'pybind11' 'pylatexenc' 'Pillow' 'wandb' 'dill' 'codetiming' \
-  'tensordict<=0.6.2' 'liger-kernel'
-
-# 只安装本 checkout，避免 setup.py 中面向旧 vLLM 的可选依赖覆盖上面的版本。
-python -m pip install -e . --no-deps
-```
-
-验证环境和当前 checkout：
-
-```bash
-export VTC_GRPO_ROOT="$PWD"
-export VTC_GRPO_PY="$PWD/.venv/bin/python"
-source examples/agent/qwen3_5_vtc/env.sh
-```
-
-该命令会打印 torch、Transformers 和 vLLM 版本，并设置
-`VLLM_ENABLE_V1_MULTIPROCESSING=0`。正式脚本使用 `flash_attention_2` 和
-`use_remove_padding=false`；不要在 Qwen3.5 配置中直接打开 Qwen2/2.5-VL 的 Ulysses
-或 remove-padding 路径。
-
-## 模型、图片和工具 schema
-
-训练脚本需要一个已经合并的 HuggingFace 格式 Qwen3.5-VL checkpoint。目录至少应有
-`config.json`、tokenizer 文件和模型权重；SFT checkpoint 不在本仓库中。设置路径：
-
-```bash
-export VTC_GRPO_MODEL=/path/to/qwen3_5_9b_sft_merged
-```
-
-数据 Parquet 只保存图片路径，不包含图片像素。因此所有训练节点必须能访问相同的低
-清页面和高 DPI 页面；如果路径不同，请在目标机器重新生成 Parquet，而不要直接复制
-本机的 Parquet。工具定义在：
-
-```bash
-export VTC_GRPO_TOOLS="$VTC_GRPO_ROOT/examples/agent/qwen3_vl_vtc_tool/zoom_region_tools.json"
-```
-
-仓库内的五个小 Parquet fixture 也保留了生成机器的绝对图片路径，主要用于检查 schema。
-只有在这些路径已挂载时它们才能直接用于 smoke；通常应按下节命令在目标机器重新生成
-8 条数据。50K 构建器同样不会改写 JSONL 中的图片路径，需保持源数据的绝对路径可见，
-或先把 JSONL 中的路径批量改成目标机器的路径。
-
-## 准备数据
-
-### 先跑 8 条连通性数据
-
-`prepare_qwen35_vtc_grpo.py` 接受 JSONL（文件扩展名可以是 `.json`），把答案放进
-`reward_model.ground_truth`，把低清图放入 `images`，高 DPI 图放入 `high_res_images`：
-
-```bash
-python examples/data_preprocess/prepare_qwen35_vtc_grpo.py \
-  --input /path/to/RULER_v2_SFT/train.json \
-  --output examples/data/qwen35_vtc/train_8_deepeyes_prompt.parquet \
-  --limit 8 --ruler-length 8192
-python examples/data_preprocess/prepare_qwen35_vtc_grpo.py \
-  --input /path/to/RULER_v2_SFT/train.json \
-  --output examples/data/qwen35_vtc/val_4_deepeyes_prompt.parquet \
-  --skip 8 --limit 4 --ruler-length 8192
-```
-
-### 50K 正式数据
-
-构建器按来源、DPI 和子任务分层抽样，固定默认 seed `20260904`，输出 50,000 条训练
-样本、5,000 条验证样本和 `manifest.json`。源目录需要包含
-`gemini-3.5-flash-30k`、`LongBench_SFT`、`MRCR_SFT`、`RULER_v1_SFT`、
-`RULER_v2_SFT` 五个子目录及其 `train*.json` 文件；具体配额见脚本顶部的
-`source_specs()`。
-
-```bash
-python examples/data_preprocess/build_qwen35_vtc_grpo_50k.py \
-  --source-root /path/to/data/VTC/SFT \
-  --output-root /path/to/data/VTC/GRPO \
-  --seed 20260904
-```
-
-若输出已存在，需显式加 `--force`。把生成目录设置给启动脚本：
-
-```bash
-export VTC_GRPO_DATA_ROOT=/path/to/data/VTC/GRPO
-export VTC_GRPO_TRAIN="$VTC_GRPO_DATA_ROOT/train.parquet"
-export VTC_GRPO_VAL="$VTC_GRPO_DATA_ROOT/val.parquet"
-```
-
-### 8K 已训练后的 32K 扩长 shard
-
-如果 8K GRPO 已经完成，扩长阶段不应继续使用原来的短样本比例。本仓库提供单独的
-构建器，默认生成 `6400` 条训练样本和 `640` 条验证样本：
-
-| prompt 估计长度 | train | validation |
-| --- | ---: | ---: |
-| `<=8K`（保留少量锚点） | 641（10.02%） | 63（9.84%） |
-| `8K–16K` | 1920（30%） | 192（30%） |
-| `16K–24K` | 2240（35%） | 224（35%） |
-| `24K–32K` | 1599（24.98%） | 161（25.16%） |
-
-目标活动 DPI 为 `72/96/144 = 50%/30%/20%`（实际 train 为 3200/1921/1279，
-validation 为 320/190/130），来源比例沿用 50K recipe 的
-`Gemini/LongBench/MRCR/RULER-v1/RULER-v2 = 60%/10%/10%/10%/10%`。构建使用固定
-seed `20260912`，并将 `prompt_length_estimate` 和 `length_bucket` 写入每行的
-`extra_info`：
-
-```bash
-python examples/data_preprocess/build_qwen35_vtc_grpo_32k_6p4k.py \
-  --source-root /path/to/data/VTC/SFT \
-  --output-root /path/to/data/VTC/GRPO \
-  --seed 20260912
-```
-
-本机已生成：
-`/vepfs-mlp2/c20250405/400042/data/VTC/GRPO/train_6p4k_32k.parquet`、
-`val_640_32k.parquet` 和 `train_6p4k_32k.manifest.json`。长度是 Qwen3.5 视觉 token
-的保守估计，最大值为 32705；实际启动时仍需开启长度过滤，并把
-`VTC_MAX_PROMPT_LENGTH=32768`。4 节点脚本可以这样使用：
-
-```bash
-VTC_GRPO_TRAIN=/path/to/data/VTC/GRPO/train_6p4k_32k.parquet \
-VTC_GRPO_VAL=/path/to/data/VTC/GRPO/val_640_32k.parquet \
-VTC_MAX_PROMPT_LENGTH=32768 \
-VTC_TEST_FREQ=0 \
-  bash examples/agent/qwen3_5_vtc/run_grpo_4nodes_8gpu_baseline.sh
-```
-
-`VTC_TEST_FREQ=0` 关闭训练中的 eval；脚本仍会读取一个有效的 `VTC_GRPO_VAL` 文件来
-初始化 DataLoader。32K prompt 再加上 agent response、工具 observation 后，必须确认
-模型本身的 `max_position_embeddings` 和 `max_model_len` 足够；不要把“prompt 32K”误当成
-“总上下文只有 32K”。
-
-## 运行顺序
-
-先做不占 GPU 的 schema、工具和图片路径检查：
-
-```bash
-python examples/agent/qwen3_5_vtc/check_pipeline.py \
-  --model "$VTC_GRPO_MODEL" \
-  --parquet examples/data/qwen35_vtc/train_8_deepeyes_prompt.parquet
-```
-
-然后用 2 卡跑 1 step，确认数据加载、vLLM、工具调用、奖励和 FSDP 更新全部连通：
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1 WANDB_MODE=offline \
-  bash examples/agent/qwen3_5_vtc/run_grpo_2gpu_smoke.sh \
-  2>&1 | tee /tmp/qwen35_vtc_smoke.log
-```
-
-正式单机 8 卡基线：
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 WANDB_MODE=offline \
-  VTC_GRPO_VAL="$VTC_GRPO_DATA_ROOT/val.parquet" \
-  bash examples/agent/qwen3_5_vtc/run_grpo_8gpu_baseline.sh \
-  2>&1 | tee /tmp/qwen35_vtc_8gpu.log
-```
-
-上面的命令显式使用构建器生成的 `val.parquet`。如果另外生成了分层的
-`val_500_uniform.parquet`，可以把 `VTC_GRPO_VAL` 改成该文件。基线使用 8 次 rollout、
-训练 batch 32、PPO micro batch 2、最大 prompt 8192、最大 response 10240。没有 W&B
-凭证时必须设置 `WANDB_MODE=offline`；在线记录则先在目标环境执行 `wandb login`。
-
-如果目标机器已有脚本约定的 `train_10k_uniform.parquet`，1000-step 包装脚本可直接使用；
-对刚生成的 50K 数据，应显式覆盖输入文件：
-
-```bash
-VTC_GRPO_TRAIN="$VTC_GRPO_DATA_ROOT/train.parquet" \
-VTC_GRPO_VAL="$VTC_GRPO_DATA_ROOT/val.parquet" \
-VTC_TOTAL_STEPS=1000 WANDB_MODE=offline \
-  bash examples/agent/qwen3_5_vtc/run_grpo_8gpu_native_1000steps.sh
-```
-
-脚本中的所有本机路径都可由环境变量覆盖，最常用的是
-`VTC_GRPO_ROOT`、`VTC_GRPO_PY`、`VTC_GRPO_MODEL`、`VTC_GRPO_DATA_ROOT`、
-`VTC_GRPO_TRAIN`、`VTC_GRPO_VAL`、`VTC_GRPO_OUTPUT` 和 `VTC_GRPO_TOOLS`。
-
-## 显存和多机调整
-
-显存不足时，按这个顺序降低 rollout 压力：
-
-```bash
-VTC_PPO_MICRO=1 VTC_ROLLOUT_LOGPROB_MICRO=1 \
-VTC_GPU_MEMORY_UTILIZATION=0.65 VTC_MAX_NUM_BATCHED_TOKENS=16384 \
-  bash examples/agent/qwen3_5_vtc/run_grpo_8gpu_baseline.sh
-```
-
-`VTC_PPO_MICRO` 和 `VTC_ROLLOUT_LOGPROB_MICRO` 独立生效；降低
-`VTC_MAX_RESPONSE_LENGTH` 会改变长工具轨迹的截断行为。多机脚本
-`run_grpo_4nodes_8gpu_baseline.sh` 已将 `trainer.nnodes=4`，但仍需要集群管理员提供
-Ray 集群启动、节点间网络和 `CUDA_VISIBLE_DEVICES` 配置；先在单机 8 卡验证后再接入
-多机调度器。
-
-## 复现实验记录
-
-每次运行至少保存以下信息：`git rev-parse HEAD`、上述核心包版本、完整的模型
-路径或模型 revision、数据 `manifest.json`、启动脚本及其环境变量、GPU 型号、日志和
-W&B run id。数据抽样和默认配置是确定的，但不同 GPU、驱动、FlashAttention 或分布式
-通信顺序仍可能造成非 bitwise 的差异；以验证集 `answer_exact`、`best_iou`、
-`tool_calls` 和 `invalid_tool_calls` 的趋势比较结果。
-
-更多奖励公式、5K 修正数据和长度过滤说明见 `docs/qwen35_vtc_reward_5k.md` 以及
-`examples/agent/qwen3_5_vtc/README.md`。
+FocusVTC builds on Qwen, LMMs-Engine, verl, and the benchmark projects listed
+in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Their source attribution
+and license texts are retained.

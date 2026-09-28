@@ -1,0 +1,11 @@
+{
+  "extends": "_base.json",
+  "benchmark": "mmmu",
+  "input_mode": "image",
+  "task": "mmmu_val",
+  "results_dir": "${FOCUSVTC_OUTPUT_ROOT}/mmmu",
+  "backend": {
+    "max_images": 16,
+    "max_model_len": 32768
+  }
+}

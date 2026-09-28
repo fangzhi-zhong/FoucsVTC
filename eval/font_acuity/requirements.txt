@@ -1,0 +1,7 @@
+reportlab
+pdf2image
+Pillow
+numpy
+openai
+httpx
+python-Levenshtein
