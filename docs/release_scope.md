@@ -9,9 +9,10 @@ modifications are retained because the model, loss, multimodal rollout, and
 crop behavior depend on them. See the module guides for their installation environments.
 
 The release contains source code, prompts, configuration templates, dependency
-declarations, and documentation. It excludes experiment outputs and scores,
-paper source and figures, generated annotations, original training/evaluation
-data, images, font binaries, model weights and intermediate checkpoints,
+declarations, documentation, and the paper's method overview figure used in
+the README. It excludes experiment outputs and scores, the full paper source,
+other paper figures, generated annotations, original training/evaluation
+data and dataset images, font binaries, model weights and intermediate checkpoints,
 tracking logs, caches, editor settings, and historical Git metadata.
 
 Paths and service credentials are supplied by the user through command-line

@@ -35,16 +35,11 @@ of an aligned high-DPI page before answering.
 - **Training and evaluation code.** The release includes REL-CoT preparation,
   SFT and GRPO runtimes, document inference, and benchmark adapters.
 
-```mermaid
-flowchart LR
-    D[Document] --> L[Low-DPI pages]
-    D --> H[High-DPI pages]
-    L --> M[FocusVTC reasoning]
-    M --> Z[zoom_region]
-    H --> Z
-    Z --> M
-    M --> A[Answer]
-```
+![Overview of FocusVTC data construction, REL-SFT, and GRPO](docs/assets/focusvtc_overview.png)
+
+**Overview of FocusVTC from the paper.** REL-CoT data construction and
+two-stage training with REL-SFT and GRPO. The region-enhancement tool is
+named `zoom_region` in this codebase.
 
 ## Quick Start
 
