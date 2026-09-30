@@ -10,7 +10,7 @@
 [![Dataset](https://img.shields.io/badge/ModelScope-REL--CoT-624AFF?style=flat-square)](https://www.modelscope.cn/datasets/zhongfangzhi/REL-CoT)
 [![Code](https://img.shields.io/badge/GitHub-Code-181717?style=flat-square&logo=github)](https://github.com/fangzhi-zhong/FoucsVTC)
 
-**Paper:** —
+**Paper:** [arXiv:2609.36651](https://arxiv.org/abs/2609.36651)
 
 [Introduction](#introduction) · [Quick Start](#quick-start) · [Training](#training) · [Evaluation](#evaluation) · [Code Guide](#code-guide)
 
@@ -203,6 +203,23 @@ external adapters, tool settings, and scoring conventions.
 checkpoints under `models/`, and run artifacts under `outputs/`. These assets
 are not bundled in the repository. See the [release scope](docs/release_scope.md)
 for package contents.
+
+## Citation
+
+If you find FocusVTC useful in your research, please cite our
+[paper](https://arxiv.org/abs/2609.36651):
+
+```bibtex
+@misc{zhong2026focusvtcefficienthighperformancevisual,
+      title={FocusVTC: Efficient and High-Performance Visual Text Compression with Adaptive Resolution},
+      author={FangZhi Zhong and Xuerui Qiu and Yuqi Pan and Ya Liu and Shaowei Gu and Bo Xu and Guoqi Li},
+      year={2026},
+      eprint={2609.36651},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2609.36651},
+}
+```
 
 ## Acknowledgments
 
