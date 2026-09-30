@@ -6,11 +6,10 @@
 
 **Read compressed pages. Locate evidence. Enhance the regions you need.**
 
+[![Paper](https://img.shields.io/badge/ArXiv-FocusVTC-brown?logo=arxiv)](https://arxiv.org/abs/2609.36651)
 [![Model](https://img.shields.io/badge/Hugging%20Face-FocusVTC-FFD21E?style=flat-square)](https://huggingface.co/zfz04/FocusVTC)
 [![Dataset](https://img.shields.io/badge/ModelScope-REL--CoT-624AFF?style=flat-square)](https://www.modelscope.cn/datasets/zhongfangzhi/REL-CoT)
 [![Code](https://img.shields.io/badge/GitHub-Code-181717?style=flat-square&logo=github)](https://github.com/fangzhi-zhong/FoucsVTC)
-
-**Paper:** [arXiv:2609.36651](https://arxiv.org/abs/2609.36651)
 
 [Introduction](#introduction) · [Quick Start](#quick-start) · [Training](#training) · [Evaluation](#evaluation) · [Code Guide](#code-guide)
 
